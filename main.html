@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pursuit and Distraction Organizer</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #1e1e1e;
+    overflow: hidden;
+}
+
+/* Board wrapper */
+.pad-wrapper {
+    width: 100vw;
+    height: 100vh;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.pad-container {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    height: 100%;
+}
+
+/* List */
+.list {
+    background: #2c2c2c;
+    padding: 10px;
+    border-radius: 8px;
+    width: 320px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    max-height: 100%;
+}
+
+.list-title {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    outline: none;
+}
+
+.card-container {
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+/* Card */
+.card {
+    background: #3a3a3a;
+    padding: 8px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+.card-title {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: white;
+    font-weight: bold;
+    margin-bottom: 8px;
+    outline: none;
+}
+
+/* Section */
+.section {
+    margin-bottom: 8px;
+}
+
+.section-title {
+    font-size: 13px;
+    font-weight: bold;
+    margin-bottom: 4px;
+    color: #ccc;
+}
+
+.textbox-container input {
+    width: 100%;
+    margin-bottom: 4px;
+    padding: 4px;
+    border-radius: 4px;
+    border: none;
+    outline: none;
+}
+
+/* Buttons */
+button {
+    background: #555;
+    color: white;
+    border: none;
+    padding: 3px 6px;
+    margin-right: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+button:hover {
+    background: #777;
+}
+
+.delete-btn {
+    background: transparent;
+    font-size: 14px;
+}
+
+.delete-btn:hover {
+    background: #aa0000;
+}
+
+/* Top controls */
+.top-controls {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+}
+</style>
+</head>
+
+<body>
+
+<div class="top-controls">
+    <button id="addListBtn">+ List</button>
+    <button id="saveBtn">Save</button>
+    <button id="loadBtn">Load</button>
+    <input type="file" id="fileInput" accept=".json" style="display:none">
+</div>
+
+<div class="pad-wrapper">
+    <div class="pad-container" id="board"></div>
+</div>
+
+<script>
+
+/* ---------- Section ---------- */
+
+function createSection(titleText, values = []) {
+
+    const section = document.createElement("div");
+    section.className = "section";
+
+    const title = document.createElement("div");
+    title.className = "section-title";
+    title.textContent = titleText + ":";
+
+    const textboxContainer = document.createElement("div");
+    textboxContainer.className = "textbox-container";
+
+    values.forEach(v => {
+        const input = document.createElement("input");
+        input.type = "text";
+        input.value = v;
+        textboxContainer.appendChild(input);
+    });
+
+    const addBtn = document.createElement("button");
+    addBtn.textContent = "+";
+    addBtn.onclick = () => {
+        const input = document.createElement("input");
+        input.type = "text";
+        textboxContainer.appendChild(input);
+    };
+
+    const removeBtn = document.createElement("button");
+    removeBtn.textContent = "-";
+    removeBtn.onclick = () => {
+        if (textboxContainer.lastElementChild)
+            textboxContainer.removeChild(textboxContainer.lastElementChild);
+    };
+
+    section.appendChild(title);
+    section.appendChild(textboxContainer);
+    section.appendChild(addBtn);
+    section.appendChild(removeBtn);
+
+    return section;
+}
+
+/* ---------- Card ---------- */
+
+function createCard(titleText = "Card Title", because = [], but = []) {
+
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const cardTitle = document.createElement("input");
+    cardTitle.className = "card-title";
+    cardTitle.type = "text";
+    cardTitle.value = titleText;
+
+    const becauseSection = createSection("Because", because);
+    const butSection = createSection("But", but);
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "delete-btn";
+    deleteBtn.textContent = "🗑";
+    deleteBtn.onclick = () => card.remove();
+
+    card.appendChild(cardTitle);
+    card.appendChild(becauseSection);
+    card.appendChild(butSection);
+    card.appendChild(deleteBtn);
+
+    return card;
+}
+
+/* ---------- List ---------- */
+
+function createList(titleText = "List", cards = []) {
+
+    const list = document.createElement("div");
+    list.className = "list";
+
+    const title = document.createElement("input");
+    title.className = "list-title";
+    title.type = "text";
+    title.value = titleText;
+
+    const cardContainer = document.createElement("div");
+    cardContainer.className = "card-container";
+
+    cards.forEach(cardData => {
+        cardContainer.appendChild(
+            createCard(
+                cardData.title,
+                cardData.because || [],
+                cardData.but || []
+            )
+        );
+    });
+
+    const addCardBtn = document.createElement("button");
+    addCardBtn.textContent = "+ Card";
+    addCardBtn.onclick = () => {
+        cardContainer.appendChild(createCard());
+    };
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "delete-btn";
+    deleteBtn.textContent = "🗑";
+    deleteBtn.onclick = () => list.remove();
+
+    list.appendChild(title);
+    list.appendChild(cardContainer);
+    list.appendChild(addCardBtn);
+    list.appendChild(deleteBtn);
+
+    return list;
+}
+
+/* ---------- Serialization ---------- */
+
+function serializeBoard() {
+
+    const data = [];
+
+    document.querySelectorAll(".list").forEach(list => {
+
+        const listTitle = list.querySelector(".list-title").value;
+        const cards = [];
+
+        list.querySelectorAll(".card").forEach(card => {
+
+            const cardTitle = card.querySelector(".card-title").value;
+            const sections = card.querySelectorAll(".section");
+
+            const because = Array.from(
+                sections[0].querySelectorAll("input")
+            ).map(i => i.value);
+
+            const but = Array.from(
+                sections[1].querySelectorAll("input")
+            ).map(i => i.value);
+
+            cards.push({
+                title: cardTitle,
+                because: because,
+                but: but
+            });
+        });
+
+        data.push({
+            title: listTitle,
+            cards: cards
+        });
+    });
+
+    return data;
+}
+
+function loadBoard(data) {
+
+    const board = document.getElementById("board");
+    board.innerHTML = "";
+
+    data.forEach(listData => {
+        board.appendChild(createList(listData.title, listData.cards));
+    });
+}
+
+/* ---------- Controls ---------- */
+
+const board = document.getElementById("board");
+
+document.getElementById("addListBtn").onclick = () =>
+    board.appendChild(createList("New List"));
+
+document.getElementById("saveBtn").onclick = () => {
+    const json = JSON.stringify(serializeBoard(), null, 4);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "pad.json";
+    a.click();
+    URL.revokeObjectURL(url);
+};
+
+const fileInput = document.getElementById("fileInput");
+
+document.getElementById("loadBtn").onclick = () => fileInput.click();
+
+fileInput.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => loadBoard(JSON.parse(ev.target.result));
+    reader.readAsText(file);
+};
+
+/* ---------- Initialize ---------- */
+
+board.appendChild(createList("I want these"));
+board.appendChild(createList("I lie to myself with these"));
+board.appendChild(createList("I need these"));
+
+</script>
+
+</body>
+</html>
